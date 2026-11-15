@@ -8,7 +8,6 @@ say **yes / neutral / no**, jot a note, and save a designed PDF report at the en
 - 34 fragrances (two Ulta sampler sets + four D.S. & Durga), each with scent
   family, plain-English notes, a sweetness/strength reading, price and a shop link.
 - Progress is saved in the browser, so she can close the tab and come back.
-- Optional head-to-head round ranks her favourites down to a single number one.
 - "Save my report" builds a PDF with jsPDF — same typefaces and palette as the
   site, with every shop link clickable. On a phone it opens the share sheet;
   on a computer it downloads.

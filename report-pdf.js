@@ -97,54 +97,16 @@
     label("Kenzie's scent report   ·   " + d.date, PAGE.M, y + 8, 8);
     y += 26;
 
-    font(SERIF, "normal", d.winner ? 40 : 34); setText(C.ink);
-    const titleLines = doc.splitTextToSize(d.winner ? d.winner.name : "Your scent report", COL);
+    font(SERIF, "normal", 34); setText(C.ink);
+    const titleLines = doc.splitTextToSize("Your scent report", COL);
     titleLines.forEach(ln => { doc.text(ln, PAGE.M, y + 30); y += 40; });
     y += 2;
 
     font(SANS, "normal", 11); setText(C.ink2);
     const n = d.total || 30;
-    const sub = d.winner
-      ? "Out of " + n + " samples, this is the one you kept choosing."
-      : n + " samples, sorted into yes, neutral and no.";
+    const sub = n + " samples, sorted into yes, neutral and no.";
     doc.text(sub, PAGE.M, y + 10);
     y += 28;
-
-    /* ---------- winner card ---------- */
-    if (d.winner) {
-      const w = d.winner, fc = FAM[w.fam] || C.accent;
-      const vibeLines = wrap(w.vibe, SERIF, "italic", 15, COL - 48);
-      const h = 154 + vibeLines.length * 19;
-      need(h);
-
-      setFill(tint(fc, 0.90)); setStroke(tint(fc, 0.55)); doc.setLineWidth(1);
-      doc.roundedRect(PAGE.M, y, COL, h, 16, 16, "FD");
-
-      let iy = y + 30;
-      label("Your No. 1", PAGE.M + 24, iy, 8.5, fc);
-      iy += 22;
-      label(w.brand, PAGE.M + 24, iy, 8.5, C.ink3);
-      iy += 20;
-      font(SERIF, "normal", 30); setText(C.ink);
-      doc.text(w.name, PAGE.M + 24, iy + 10);
-      iy += 26;
-
-      font(SERIF, "italic", 15); setText(C.ink2);
-      vibeLines.forEach(ln => { iy += 19; doc.text(ln, PAGE.M + 24, iy); });
-      iy += 20;
-
-      setStroke(tint(fc, 0.70)); doc.setLineWidth(0.6);
-      doc.line(PAGE.M + 24, iy, PAGE.M + COL - 24, iy);
-      iy += 20;
-
-      label("From $" + w.small + "  ·  " + w.smallSize + "  ·  " + w.fullSize + " $" + w.full,
-            PAGE.M + 24, iy, 9, C.ink2);
-      const lx = PAGE.M + 24 + labelWidth("From $" + w.small + "  ·  " + w.smallSize + "  ·  " + w.fullSize + " $" + w.full, 9) + 14;
-      const lw = linkText("Buy at " + (w.shop || "Ulta"), lx, iy, 9.5);
-      doc.link(lx, iy - 9, lw, 13, { url: w.url });
-
-      y += h + 26;
-    }
 
     /* ---------- one group: Yes / Neutral / No / Not reviewed ---------- */
     function group(g) {
@@ -162,7 +124,7 @@
       label(String(g.items.length), PAGE.M + COL - 16, y + 21, 9, C.ink3, "right");
       y += 32 + 14;
 
-      g.items.forEach((it, i) => {
+      g.items.forEach((it, i) => {  /* eslint-disable-line no-unused-vars */
         const metaTxt = it.famLabel + "   ·   " + it.notes.join(", ");
         const textW = COL - 24 - 86;
         const metaLines = wrap(metaTxt, SANS, "normal", 9, textW);
@@ -174,8 +136,7 @@
         const tx = PAGE.M + 24;
         let iy = y + 12;
 
-        if (g.ranked) label(String(i + 1), PAGE.M + 2, iy + 17, 9, C.ink3);
-        else { setFill(tint(sc, 0.45)); doc.circle(PAGE.M + 9, iy + 13, 2.2, "F"); }
+        setFill(tint(sc, 0.45)); doc.circle(PAGE.M + 9, iy + 13, 2.2, "F");
 
         label(it.brand, tx, iy, 7.5, C.ink3);
         iy += 16;

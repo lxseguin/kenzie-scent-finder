@@ -1,3 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Work through perfume samples one at a time — yes, neutral or no — then save a report.">
+<meta name="theme-color" content="#F1F0F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121018" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-title" content="Scent Finder">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%A7%B4%3C/text%3E%3C/svg%3E">
 <title>Kenzie's Scent Finder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,15 +107,18 @@
    BASE
    ============================================================ */
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden}
 body{
   margin:0;background:var(--ground);color:var(--ink);
+  overflow-x:hidden;
+  -webkit-tap-highlight-color:rgba(74,63,143,.12);
   font-family:"Hanken Grotesk","Helvetica Neue",Helvetica,Arial,sans-serif;
   font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
 }
 h1,h2,h3{margin:0;font-weight:400;text-wrap:balance}
 p{margin:0}
-button{font:inherit;color:inherit;margin:0}
+button{font:inherit;color:inherit;margin:0;touch-action:manipulation}
+a,.tile,.vbtn{touch-action:manipulation}
 a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 
@@ -115,7 +129,16 @@ a{color:var(--accent)}
 }
 .num{font-variant-numeric:tabular-nums}
 
-.shell{max-width:620px;margin:0 auto;padding:0 18px 56px;min-height:100svh;display:flex;flex-direction:column}
+.shell{
+  max-width:620px;margin:0 auto;min-height:100svh;display:flex;flex-direction:column;
+  padding:0 18px calc(56px + env(safe-area-inset-bottom,0px));
+}
+@media (max-width:380px){ .shell{padding-left:14px;padding-right:14px} }
+@media (max-width:480px){
+  .hero{padding-top:24px;gap:12px}
+  .lede{font-size:16px}
+  .gridhead{margin:18px 0 12px}
+}
 
 /* ---- sticky header ---- */
 .topbar{
@@ -278,7 +301,11 @@ input[aria-invalid="true"]{border-color:var(--fam-fruity)}
 }
 .price-main{font-size:16px;font-weight:600;color:var(--ink);white-space:nowrap}
 .price-sub{font-family:"DM Mono",monospace;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
-.price-link{margin-left:auto;font-size:14px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+.price-link{
+  margin-left:auto;font-size:14px;font-weight:600;color:var(--accent);
+  text-decoration:none;white-space:nowrap;
+  display:inline-flex;align-items:center;padding:12px 4px;margin-block:-12px;
+}
 .price-link:hover{text-decoration:underline}
 
 /* verdict buttons */
@@ -318,25 +345,9 @@ input[aria-invalid="true"]{border-color:var(--fam-fruity)}
 .pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
 
 /* ============================================================
-   FINALS
-   ============================================================ */
-.versus{display:flex;flex-direction:column;gap:12px}
-.vs-card{position:relative;overflow:hidden;cursor:pointer;text-align:left;width:100%;display:block;padding:0;
-  background:var(--surface);border:1.5px solid var(--line-strong);border-radius:var(--r-l);
-  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease}
-.vs-card:hover{box-shadow:var(--shadow-m);border-color:color-mix(in oklab,var(--fam) 55%,var(--line-strong))}
-.vs-card:active{transform:translateY(1px)}
-.vs-inner{position:relative;padding:20px;display:flex;flex-direction:column;gap:9px}
-.vs-name{font-family:"Instrument Serif",Georgia,serif;font-size:29px;line-height:1.03}
-.vs-vibe{font-size:14px;color:var(--ink-2);line-height:1.45}
-.vs-or{display:flex;align-items:center;gap:14px;color:var(--ink-3);
-  font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
-.vs-or::before,.vs-or::after{content:"";flex:1;height:1px;background:var(--line)}
-
-/* ============================================================
    REPORT
    ============================================================ */
-.sec{margin:34px 0 10px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.sec{margin:34px 0 10px;display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
 .sec h2{font-family:"Instrument Serif",Georgia,serif;font-size:28px;line-height:1.1}
 .sec .eyebrow{white-space:nowrap}
 
@@ -358,18 +369,10 @@ input[aria-invalid="true"]{border-color:var(--fam-fruity)}
 .item-brand{display:block;font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
 .item-name{font-family:"Instrument Serif",Georgia,serif;font-size:20px;line-height:1.15}
 .item-meta{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
-.item-meta a{color:var(--accent);text-decoration:none}
+.item-meta a{color:var(--accent);text-decoration:none;display:inline-block;padding:10px 3px;margin:-10px -3px}
 .item-meta a:hover{text-decoration:underline}
 .item-note{display:block;font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:15px;color:var(--ink-2);margin-top:3px}
 .item-price{font-family:"DM Mono",monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
-
-.winner{position:relative;overflow:hidden;border-radius:var(--r-l);background:var(--surface);
-  border:1px solid color-mix(in oklab,var(--fam) 40%,var(--line));box-shadow:var(--shadow-l)}
-.winner-wash{position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(130% 110% at 50% -10%,color-mix(in oklab,var(--fam) 32%,transparent) 0%,transparent 70%)}
-.winner-body{position:relative;padding:32px 24px 26px;display:flex;flex-direction:column;gap:13px}
-.winner-crown{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--fam)}
-.winner-name{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(36px,9vw,54px);line-height:.99}
 
 .fambars{display:flex;flex-direction:column;gap:9px}
 .fambar{display:grid;grid-template-columns:120px 1fr 28px;align-items:center;gap:11px}
@@ -395,7 +398,8 @@ input[aria-invalid="true"]{border-color:var(--fam-fruity)}
   *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
 </style>
-
+</head>
+<body>
 <div class="shell">
   <header class="topbar" id="topbar">
     <div class="topbar-row">
@@ -667,8 +671,7 @@ try{ localStorage.setItem(KEY+"-probe","1"); localStorage.removeItem(KEY+"-probe
 catch(e){ storageOK = false; }
 
 function blankState(){
-  return { screen:"grid", current:null, verdicts:{}, jots:{},
-           finals:null, ranking:null };
+  return { screen:"grid", current:null, verdicts:{}, jots:{} };
 }
 let S = blankState();
 try{
@@ -706,19 +709,11 @@ function stCls(id){ return S.verdicts[id] ? STATUS[S.verdicts[id]].cls : "st-new
 function money(n){ return "$" + n; }
 function shopOf(s){ return s.shop || "Ulta"; }
 
-/* yes list, ranked if she ran the head-to-head */
-function yesOrdered(){
-  const yes = idsWith("yes");
-  if(!S.ranking) return yes;
-  const ranked = S.ranking.filter(id => S.verdicts[id] === "yes");
-  return ranked.concat(yes.filter(id => !ranked.includes(id)));
-}
-
 /* ==============================================================
    HEADER
    ============================================================== */
 function renderTop(){
-  const on = ["scent","report","finals"].includes(S.screen);
+  const on = ["scent","report"].includes(S.screen);
   topbar.dataset.on = on ? "1" : "0";
   if(!on) return;
   document.getElementById("rail").innerHTML = ORDER.map(id => {
@@ -889,8 +884,6 @@ function viewScent(){
     b.addEventListener("click", ()=>{
       const k = b.dataset.v;
       if(S.verdicts[id] === k) delete S.verdicts[id]; else S.verdicts[id] = k;
-      // A changed answer can invalidate an existing ranking.
-      if(S.ranking && S.verdicts[id] !== "yes") S.ranking = S.ranking.filter(x => x !== id);
       save();
       // Stay put — she may still want to write a note. Save takes her back.
       render();
@@ -900,87 +893,6 @@ function viewScent(){
   const leave = ()=>{ S.screen = "grid"; save(); render(); };
   document.getElementById("back").addEventListener("click", leave);
   document.getElementById("saveScent").addEventListener("click", leave);
-}
-
-/* ==============================================================
-   FINALS — binary insertion sort over the "yes" pile.
-   Plain data only, so it survives a reload mid-round.
-   ============================================================== */
-function estimateComparisons(n){
-  let t = 0; for(let i=1;i<n;i++) t += Math.ceil(Math.log2(i+1));
-  return Math.max(t,1);
-}
-function startFinals(){
-  const pool = idsWith("yes");
-  if(pool.length < 2){ S.ranking = pool.slice(); S.finals = null; S.screen = "report"; return; }
-  S.finals = { sorted:[pool[0]], queue:pool.slice(1), current:null, lo:0, hi:0,
-               done:0, estimate:estimateComparisons(pool.length) };
-  S.screen = "finals";
-  advanceFinals();
-}
-function advanceFinals(){
-  const f = S.finals;
-  if(!f) return false;
-  for(;;){
-    if(f.current === null){
-      if(f.queue.length === 0){ finishFinals(f.sorted.slice()); return false; }
-      f.current = f.queue.shift(); f.lo = 0; f.hi = f.sorted.length;
-    }
-    if(f.lo >= f.hi){ f.sorted.splice(f.lo,0,f.current); f.current = null; continue; }
-    return true;
-  }
-}
-function finishFinals(ranking){
-  S.ranking = ranking; S.finals = null; S.screen = "report";
-}
-
-function vsCard(s, side){
-  return `<button class="vs-card fam-${s.fam}" data-side="${side}">
-    <div class="card-wash"></div>
-    <div class="vs-inner">
-      <span class="chip"><i class="chip-dot"></i>${esc(FAMILIES[s.fam].label)}</span>
-      <div><div class="card-brand">${esc(s.brand)}</div><div class="vs-name">${esc(s.name)}</div></div>
-      <p class="vs-vibe">${esc(s.vibe)}</p>
-    </div></button>`;
-}
-
-function viewFinals(){
-  if(!S.finals){ S.screen = "report"; render(); return; }
-  if(!advanceFinals()){ save(); render(); return; }
-  const f = S.finals;
-  const a = BY_ID[f.current];
-  const mid = (f.lo + f.hi) >> 1;
-  const b = BY_ID[f.sorted[mid]];
-  const pct = Math.min(100, Math.round((f.done / f.estimate) * 100));
-
-  main.innerHTML = `
-    <section class="screen">
-      <div class="gridhead"><h2>Which would you wear tomorrow?</h2></div>
-      <div class="rail st-yes" style="margin-bottom:8px" aria-hidden="true">
-        <i style="flex:0 0 ${pct}%"></i><i class="pending" style="flex:1"></i>
-      </div>
-      <p class="eyebrow num" style="margin-bottom:16px">About ${Math.max(0, f.estimate - f.done)} taps to go</p>
-      <div class="versus">${vsCard(a,"a")}<div class="vs-or">or</div>${vsCard(b,"b")}</div>
-      <div class="pager">
-        <button class="btn btn-ghost" id="stop">Stop here, rank what's done</button>
-        <span class="eyebrow">Leading: ${esc(BY_ID[f.sorted[0]].name)}</span>
-      </div>
-    </section>`;
-
-  main.querySelectorAll(".vs-card").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      if(el.dataset.side === "a") f.hi = mid; else f.lo = mid + 1;
-      f.done++;
-      if(!advanceFinals()){ save(); render(); return; }
-      save(); render();
-    });
-  });
-  document.getElementById("stop").addEventListener("click", ()=>{
-    const rest = f.sorted.slice();
-    if(f.current !== null) rest.splice(Math.min(f.lo, rest.length), 0, f.current);
-    finishFinals(rest.concat(f.queue));
-    save(); render();
-  });
 }
 
 /* ==============================================================
@@ -1014,7 +926,7 @@ function profileSentence(p){
 /* ==============================================================
    REPORT
    ============================================================== */
-function groupBlock(key, ids, ranked){
+function groupBlock(key, ids){
   const st = key === "none" ? {label:"Not reviewed yet", cls:"st-new"} : STATUS[key];
   const sub = { yes:"Worth your money", neutral:"Liked these, didn't love them",
                 no:"Don't buy these", none:"Still to smell" }[key];
@@ -1023,10 +935,10 @@ function groupBlock(key, ids, ranked){
     <div class="group ${st.cls}" style="margin-bottom:14px">
       <div class="group-head"><i></i><b>${esc(st.label)} &middot; ${esc(sub)}</b><span class="num">${ids.length}</span></div>
       <div class="group-body">
-        ${ids.map((id,i)=>{
+        ${ids.map(id=>{
           const s = BY_ID[id];
           return `<div class="item">
-            <span class="item-rank">${ranked ? (i+1) : "&middot;"}</span>
+            <span class="item-rank">&middot;</span>
             <span>
               <span class="item-brand">${esc(s.brand)}</span>
               <span class="item-name">${esc(s.name)}</span>
@@ -1041,11 +953,9 @@ function groupBlock(key, ids, ranked){
 }
 
 function viewReport(){
-  const yes = yesOrdered(), neutral = idsWith("neutral"), no = idsWith("no");
+  const yes = idsWith("yes"), neutral = idsWith("neutral"), no = idsWith("no");
   const none = ORDER.filter(id => !S.verdicts[id]);
   const p = profile();
-  const ranked = !!S.ranking && yes.length > 1;
-  const win = ranked ? BY_ID[yes[0]] : null;
 
   main.innerHTML = `
     <section class="screen">
@@ -1057,38 +967,14 @@ function viewReport(){
       <div style="padding:10px 0 4px">
         <div class="eyebrow">Kenzie's scent report</div>
         <h1 class="serif" style="font-size:clamp(36px,9.5vw,52px);line-height:1;margin-top:6px">
-          ${win ? "Here's your winner." : yes.length ? "Here's where you landed." : "Here's what you thought."}</h1>
+          ${yes.length ? "Here's where you landed." : "Here's what you thought."}</h1>
       </div>
 
-      ${win ? `
-      <article class="winner fam-${win.fam}" style="margin-top:16px">
-        <div class="winner-wash"></div>
-        <div class="winner-body">
-          <div class="winner-crown">No. 1 of ${yes.length}</div>
-          <div><div class="card-brand">${esc(win.brand)}</div><h2 class="winner-name">${esc(win.name)}</h2></div>
-          <p class="card-vibe">${esc(win.vibe)}</p>
-          <div class="card-rule"></div>
-          <div class="price" style="background:transparent;border:0;padding:0">
-            <span class="price-main">From ${money(win.small)}</span>
-            <span class="price-sub">${esc(win.smallSize)} &middot; ${esc(win.fullSize)} ${money(win.full)}</span>
-            <a class="price-link" href="${esc(win.url)}" target="_blank" rel="noopener noreferrer">Buy at ${esc(shopOf(win))} &#8599;</a>
-          </div>
-        </div>
-      </article>` : ""}
-
-      ${!ranked && yes.length > 1 ? `
-      <div class="panel" style="margin-top:18px">
-        <h3>Want one clear winner?</h3>
-        <p>You said yes to <b>${yes.length}</b>. Run them head-to-head and we'll rank them properly —
-        about ${estimateComparisons(yes.length)} taps.</p>
-        <button class="btn btn-primary btn-block" id="runFinals">Run the head-to-head</button>
-      </div>` : ""}
-
       <div class="sec"><h2>Every scent, sorted</h2><span class="eyebrow">Yes &middot; Neutral &middot; No</span></div>
-      ${groupBlock("yes", yes, ranked)}
-      ${groupBlock("neutral", neutral, false)}
-      ${groupBlock("no", no, false)}
-      ${groupBlock("none", none, false)}
+      ${groupBlock("yes", yes)}
+      ${groupBlock("neutral", neutral)}
+      ${groupBlock("no", no)}
+      ${groupBlock("none", none)}
 
       ${p ? `
       <div class="sec"><h2>What your nose likes</h2><span class="eyebrow">Your profile</span></div>
@@ -1111,7 +997,7 @@ function viewReport(){
       <div class="panel">
         <p>Paper strips get you most of the way, but perfume smells different on skin.</p>
         <div class="tips">
-          <div class="tip"><i class="tip-n"></i><p>Spray <b>${esc(BY_ID[yes[0]].name)}</b> on one wrist and <b>${yes[1] ? esc(BY_ID[yes[1]].name) : "your runner-up"}</b> on the other. Don't rub them together — it crushes the top notes.</p></div>
+          <div class="tip"><i class="tip-n"></i><p>Pick two of your yeses and spray one on each wrist. Don't rub them together — it crushes the top notes.</p></div>
           <div class="tip"><i class="tip-n"></i><p>Walk away for <b>thirty minutes</b>. The one you keep lifting your wrist to smell is the one to buy.</p></div>
           <div class="tip"><i class="tip-n"></i><p>Start with the <b>small bottle</b> — most of these are around $30. You don't have to commit to a full size on day one.</p></div>
         </div>
@@ -1150,9 +1036,8 @@ function viewReport(){
    report-pdf.js. Layout and styling live over there.
    ============================================================== */
 function reportPayload(){
-  const yes = yesOrdered(), neutral = idsWith("neutral"), no = idsWith("no");
+  const yes = idsWith("yes"), neutral = idsWith("neutral"), no = idsWith("no");
   const none = ORDER.filter(id => !S.verdicts[id]);
-  const ranked = !!S.ranking && yes.length > 1;
   const p = profile();
   const pick = id => {
     const s = BY_ID[id];
@@ -1164,13 +1049,12 @@ function reportPayload(){
   return {
     date: new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}),
     total: TOTAL,
-    winner: ranked ? pick(yes[0]) : null,
     counts: { yes:yes.length, neutral:neutral.length, no:no.length, none:none.length },
     groups: [
-      { key:"yes",     label:"Yes",     sub:"Worth your money",              items:yes.map(pick),     ranked:ranked },
-      { key:"neutral", label:"Neutral", sub:"Liked these, didn't love them", items:neutral.map(pick), ranked:false },
-      { key:"no",      label:"No",      sub:"Don't buy these",               items:no.map(pick),      ranked:false },
-      { key:"none",    label:"Not reviewed yet", sub:"Still to smell",       items:none.map(pick),    ranked:false }
+      { key:"yes",     label:"Yes",     sub:"Worth your money",              items:yes.map(pick) },
+      { key:"neutral", label:"Neutral", sub:"Liked these, didn't love them", items:neutral.map(pick) },
+      { key:"no",      label:"No",      sub:"Don't buy these",               items:no.map(pick) },
+      { key:"none",    label:"Not reviewed yet", sub:"Still to smell",       items:none.map(pick) }
     ],
     profile: p ? {
       sentence: profileSentence(p).replace(/<\/?b>/g,""),
@@ -1178,9 +1062,7 @@ function reportPayload(){
       families: p.top.map(([k,c]) => ({ key:k, label:FAMILIES[k].label, n:c }))
     } : null,
     steps: yes.length ? [
-      "Spray " + BY_ID[yes[0]].name + " on one wrist and " +
-        (yes[1] ? BY_ID[yes[1]].name : "your runner-up") +
-        " on the other. Don't rub them together — it crushes the top notes.",
+      "Pick two of your yeses and spray one on each wrist. Don't rub them together — it crushes the top notes.",
       "Walk away for thirty minutes. The one you keep lifting your wrist to smell is the one to buy.",
       "Start with the small bottle. You don't have to commit to a full size on day one."
     ] : []
@@ -1239,17 +1121,17 @@ function render(){
   switch(S.screen){
     case "grid":   viewGrid(); break;
     case "scent":  viewScent(); break;
-    case "finals": viewFinals(); break;
     case "report": viewReport(); break;
     default:       viewGrid();
   }
-  if(S.screen !== "finals") window.scrollTo({top:0,behavior:"instant"});
+  window.scrollTo({top:0,behavior:"instant"});
 }
 
 /* Repair a stale save that points at a screen whose data is gone. */
 if(S.screen === "scent" && !BY_ID[S.current]) S.screen = "grid";
-if(S.screen === "finals" && !S.finals) S.screen = S.ranking ? "report" : "grid";
-if(!["grid","scent","finals","report"].includes(S.screen)) S.screen = "grid";
+if(!["grid","scent","report"].includes(S.screen)) S.screen = "grid";
 
 render();
 </script>
+</body>
+</html>
