@@ -1,0 +1,1242 @@
+<title>Kenzie's Scent Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="fonts/fonts.js"></script>
+<script src="report-pdf.js"></script>
+
+<style>
+/* ============================================================
+   TOKENS
+   Two colour systems, doing two different jobs:
+     --st-*   status (has she answered yet, and how) -> the grid
+     --fam-*  scent family (what it smells like)     -> the cards
+   ============================================================ */
+:root{
+  --ground:#F1F0F4;
+  --surface:#FCFBFD;
+  --surface-2:#F5F4F8;
+  --ink:#191621;
+  --ink-2:#4C4657;
+  --ink-3:#7E7789;
+  --line:#E3E0E9;
+  --line-strong:#CFCADA;
+  --accent:#4A3F8F;
+  --accent-ink:#FFFFFF;
+  --shadow-s:0 1px 2px rgba(25,22,33,.05);
+  --shadow-m:0 1px 2px rgba(25,22,33,.05), 0 10px 28px -16px rgba(25,22,33,.32);
+  --shadow-l:0 2px 4px rgba(25,22,33,.05), 0 28px 60px -28px rgba(25,22,33,.38);
+
+  /* status */
+  --st-new:#6A5CA6;
+  --st-yes:#3E7D5E;
+  --st-neutral:#9E7832;
+  --st-no:#817A8C;
+
+  /* scent family */
+  --fam-gourmand:#A9632E;
+  --fam-fruity:#BC334A;
+  --fam-floral:#AD4A85;
+  --fam-amber:#6B50A0;
+  --fam-fresh:#1F7B7D;
+  --fam-woody:#64602E;
+
+  --tint:11%;
+  --tint-edge:30%;
+  --wash:14%;
+  --wash-soft:8%;
+  --r-s:10px;
+  --r-m:16px;
+  --r-l:24px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121018; --surface:#1B1823; --surface-2:#241F2F;
+    --ink:#F3F0F8; --ink-2:#BAB2C8; --ink-3:#8A8299;
+    --line:#2E2839; --line-strong:#423A54;
+    --accent:#AD9FF5; --accent-ink:#17121F;
+    --shadow-s:0 1px 2px rgba(0,0,0,.4);
+    --shadow-m:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+    --shadow-l:0 2px 4px rgba(0,0,0,.4), 0 28px 60px -28px rgba(0,0,0,.9);
+    --st-new:#A294E8; --st-yes:#6FBE92; --st-neutral:#D4A85C; --st-no:#8A8299;
+    --fam-gourmand:#E2A369; --fam-fruity:#F2748A; --fam-floral:#E78DC4;
+    --fam-amber:#B197EC; --fam-fresh:#59C2C0; --fam-woody:#BBB463;
+    --tint:17%; --tint-edge:34%; --wash:20%; --wash-soft:11%;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121018; --surface:#1B1823; --surface-2:#241F2F;
+  --ink:#F3F0F8; --ink-2:#BAB2C8; --ink-3:#8A8299;
+  --line:#2E2839; --line-strong:#423A54;
+  --accent:#AD9FF5; --accent-ink:#17121F;
+  --shadow-s:0 1px 2px rgba(0,0,0,.4);
+  --shadow-m:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+  --shadow-l:0 2px 4px rgba(0,0,0,.4), 0 28px 60px -28px rgba(0,0,0,.9);
+  --st-new:#A294E8; --st-yes:#6FBE92; --st-neutral:#D4A85C; --st-no:#8A8299;
+  --fam-gourmand:#E2A369; --fam-fruity:#F2748A; --fam-floral:#E78DC4;
+  --fam-amber:#B197EC; --fam-fresh:#59C2C0; --fam-woody:#BBB463;
+  --tint:17%; --tint-edge:34%; --wash:20%; --wash-soft:11%;
+}
+
+.st-new{--st:var(--st-new)}
+.st-yes{--st:var(--st-yes)}
+.st-neutral{--st:var(--st-neutral)}
+.st-no{--st:var(--st-no)}
+
+.fam-gourmand{--fam:var(--fam-gourmand)}
+.fam-fruity{--fam:var(--fam-fruity)}
+.fam-floral{--fam:var(--fam-floral)}
+.fam-amber{--fam:var(--fam-amber)}
+.fam-fresh{--fam:var(--fam-fresh)}
+.fam-woody{--fam:var(--fam-woody)}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Hanken Grotesk","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0;font-weight:400;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+.serif{font-family:"Instrument Serif","Iowan Old Style",Georgia,serif;font-weight:400}
+.eyebrow{
+  font-family:"DM Mono","SF Mono",ui-monospace,Menlo,monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+}
+.num{font-variant-numeric:tabular-nums}
+
+.shell{max-width:620px;margin:0 auto;padding:0 18px 56px;min-height:100svh;display:flex;flex-direction:column}
+
+/* ---- sticky header ---- */
+.topbar{
+  position:sticky;top:0;z-index:20;background:var(--ground);
+  padding:12px 0 10px;display:none;flex-direction:column;gap:9px;
+}
+.topbar[data-on="1"]{display:flex}
+.topbar::after{
+  content:"";position:absolute;left:-18px;right:-18px;bottom:-14px;height:14px;
+  background:linear-gradient(var(--ground),transparent);pointer-events:none;
+}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.saved{display:flex;align-items:center;gap:6px;transition:opacity .4s}
+.saved-dot{width:6px;height:6px;border-radius:50%;background:var(--st-yes)}
+
+.rail{display:flex;gap:2px;height:7px}
+.rail i{flex:1 1 0;border-radius:2px;background:color-mix(in oklab,var(--st) 55%,var(--line));transition:background .3s}
+.rail i.pending{background:var(--line)}
+
+.counts{display:flex;gap:14px;flex-wrap:wrap}
+.count{display:inline-flex;align-items:center;gap:6px;font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.count i{width:8px;height:8px;border-radius:50%;background:var(--st)}
+.count b{color:var(--ink-2);font-weight:400}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+.screen{display:flex;flex:1;flex-direction:column;animation:rise .4s cubic-bezier(.2,.7,.3,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+
+/* ---- welcome ---- */
+.hero{padding:34px 0 2px;display:flex;flex-direction:column;gap:14px}
+.hero-vials{display:flex;gap:5px;height:56px;align-items:flex-end}
+.vial{
+  flex:1 1 0;border-radius:3px 3px 5px 5px;opacity:.9;transform-origin:bottom;
+  background:linear-gradient(var(--fam),color-mix(in oklab,var(--fam) 55%,var(--surface)));
+  animation:pour .9s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes pour{from{transform:scaleY(.06);opacity:0}to{transform:scaleY(1);opacity:.9}}
+.hero h1{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(36px,9.5vw,56px);line-height:1.0}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.lede{font-size:17px;color:var(--ink-2);max-width:46ch}
+
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);
+  padding:24px 22px;box-shadow:var(--shadow-s);display:flex;flex-direction:column;gap:16px;
+}
+.panel h3{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.panel p{color:var(--ink-2);font-size:15px}
+
+.tips{display:flex;flex-direction:column;gap:13px;counter-reset:tip}
+.tip{display:flex;gap:13px;align-items:flex-start}
+.tip-n{
+  counter-increment:tip;flex:0 0 22px;height:22px;border-radius:50%;
+  background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;
+  margin-top:2px;font-family:"DM Mono",monospace;font-size:11px;color:var(--ink-2);
+}
+.tip-n::before{content:counter(tip)}
+.tip p{font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.tip b{color:var(--ink);font-weight:600}
+
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:14.5px;color:var(--ink-2)}
+.field .hint{font-size:13px;color:var(--ink-3)}
+input[type="email"],input[type="text"]{
+  font:inherit;font-size:16px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:var(--r-s);padding:12px 13px;width:100%;
+}
+input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+input[aria-invalid="true"]{border-color:var(--fam-fruity)}
+.err{font-size:13.5px;color:var(--fam-fruity);min-height:19px}
+
+/* ---- buttons ---- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  border:1px solid var(--line-strong);border-radius:var(--r-m);
+  padding:15px 22px;font-size:16px;font-weight:600;cursor:pointer;
+  background:var(--surface);color:var(--ink);text-align:center;text-decoration:none;
+  transition:transform .12s ease, box-shadow .2s ease, background .2s ease;
+}
+.btn:hover{box-shadow:var(--shadow-m)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--ink-3);font-weight:500;padding:10px 12px;font-size:14px}
+.btn-ghost:hover{color:var(--ink);background:var(--surface-2);box-shadow:none}
+.btn-block{width:100%}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row .btn{flex:1 1 170px}
+
+/* ============================================================
+   THE GRID
+   ============================================================ */
+.gridhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:22px 0 14px}
+.gridhead h2{font-family:"Instrument Serif",Georgia,serif;font-size:30px;line-height:1.05}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:520px){ .grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+.tile{
+  position:relative;text-align:left;cursor:pointer;overflow:hidden;
+  border-radius:var(--r-m);padding:13px 13px 12px;
+  background:color-mix(in oklab,var(--st) var(--tint),var(--surface));
+  border:1px solid color-mix(in oklab,var(--st) var(--tint-edge),transparent);
+  display:flex;flex-direction:column;gap:5px;min-height:104px;
+  transition:transform .12s ease, box-shadow .2s ease, background .3s ease, border-color .3s ease;
+}
+.tile:hover{box-shadow:var(--shadow-m);transform:translateY(-1px)}
+.tile:active{transform:translateY(0)}
+.tile-brand{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);line-height:1.3}
+.tile-name{font-family:"Instrument Serif",Georgia,serif;font-size:19px;line-height:1.08;color:var(--ink)}
+.tile-foot{margin-top:auto;display:flex;align-items:center;gap:6px;padding-top:7px}
+.tile-dot{width:8px;height:8px;border-radius:50%;background:var(--st);flex:0 0 auto}
+.tile-status{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:color-mix(in oklab,var(--st) 72%,var(--ink-3))}
+
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0 2px}
+.legend-item{display:inline-flex;align-items:center;gap:6px;font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.legend-sw{width:11px;height:11px;border-radius:3px;background:color-mix(in oklab,var(--st) var(--tint),var(--surface));border:1px solid color-mix(in oklab,var(--st) var(--tint-edge),transparent)}
+
+.gridfoot{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+
+/* ============================================================
+   SCENT DETAIL
+   ============================================================ */
+.crumb{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 12px}
+
+.card{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-l);box-shadow:var(--shadow-m);display:flex;flex-direction:column}
+.card-wash{position:absolute;inset:0 0 auto;height:190px;pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 0%,color-mix(in oklab,var(--fam) var(--wash),transparent) 0%,transparent 72%)}
+.card-body{position:relative;padding:24px 22px 22px;display:flex;flex-direction:column;gap:15px}
+
+.chip{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;
+  font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--fam);background:color-mix(in oklab,var(--fam) var(--wash-soft),var(--surface));
+  border:1px solid color-mix(in oklab,var(--fam) 30%,transparent);padding:5px 11px;border-radius:999px}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:var(--fam)}
+
+.card-brand{font-family:"DM Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.card-name{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(32px,8vw,44px);line-height:1.02;margin-top:-5px}
+.card-vibe{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:21px;line-height:1.35;color:var(--ink-2)}
+.card-rule{height:1px;background:var(--line)}
+
+.notes-label{font-family:"DM Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+.notes{display:flex;flex-wrap:wrap;gap:6px}
+.note{font-size:13.5px;padding:5px 11px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
+
+.meters{display:flex;flex-direction:column;gap:11px}
+.meter{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.meter span{font-family:"DM Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.meter-track{height:4px;border-radius:999px;background:var(--line);position:relative}
+.meter-dot{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--fam);
+  transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--surface)}
+
+/* price strip */
+.price{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-m);
+  padding:12px 14px;
+}
+.price-main{font-size:16px;font-weight:600;color:var(--ink);white-space:nowrap}
+.price-sub{font-family:"DM Mono",monospace;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.price-link{margin-left:auto;font-size:14px;font-weight:600;color:var(--accent);text-decoration:none;white-space:nowrap}
+.price-link:hover{text-decoration:underline}
+
+/* verdict buttons */
+.verdicts{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+.vbtn{
+  display:flex;align-items:center;gap:14px;text-align:left;padding:15px 18px;
+  border-radius:var(--r-m);cursor:pointer;background:var(--surface);
+  border:1.5px solid var(--line-strong);
+  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.vbtn:hover{box-shadow:var(--shadow-m);border-color:color-mix(in oklab,var(--st) 60%,var(--line-strong))}
+.vbtn:active{transform:translateY(1px)}
+.vbtn[aria-pressed="true"]{
+  background:color-mix(in oklab,var(--st) var(--tint),var(--surface));
+  border-color:var(--st);
+}
+.vbtn-mark{flex:0 0 34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  border:1.5px solid var(--st);color:var(--st)}
+.vbtn-mark svg{width:16px;height:16px;display:block}
+.vbtn-txt{display:flex;flex-direction:column;line-height:1.25}
+.vbtn-txt b{font-size:16px;font-weight:600;color:var(--ink)}
+.vbtn-txt small{font-size:13px;color:var(--ink-3)}
+
+.jot{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.jot label{font-size:14.5px;color:var(--ink-2);display:flex;align-items:baseline;gap:8px}
+.jot label span{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3)}
+.jot textarea{
+  font:inherit;font-size:16px;line-height:1.5;color:var(--ink);
+  background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:var(--r-m);padding:13px 14px;width:100%;
+  min-height:108px;resize:vertical;display:block;
+}
+.jot textarea::placeholder{color:var(--ink-3)}
+.jot textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+
+.pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
+
+/* ============================================================
+   FINALS
+   ============================================================ */
+.versus{display:flex;flex-direction:column;gap:12px}
+.vs-card{position:relative;overflow:hidden;cursor:pointer;text-align:left;width:100%;display:block;padding:0;
+  background:var(--surface);border:1.5px solid var(--line-strong);border-radius:var(--r-l);
+  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease}
+.vs-card:hover{box-shadow:var(--shadow-m);border-color:color-mix(in oklab,var(--fam) 55%,var(--line-strong))}
+.vs-card:active{transform:translateY(1px)}
+.vs-inner{position:relative;padding:20px;display:flex;flex-direction:column;gap:9px}
+.vs-name{font-family:"Instrument Serif",Georgia,serif;font-size:29px;line-height:1.03}
+.vs-vibe{font-size:14px;color:var(--ink-2);line-height:1.45}
+.vs-or{display:flex;align-items:center;gap:14px;color:var(--ink-3);
+  font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.vs-or::before,.vs-or::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ============================================================
+   REPORT
+   ============================================================ */
+.sec{margin:34px 0 10px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.sec h2{font-family:"Instrument Serif",Georgia,serif;font-size:28px;line-height:1.1}
+.sec .eyebrow{white-space:nowrap}
+
+.group{border-radius:var(--r-l);overflow:hidden;border:1px solid color-mix(in oklab,var(--st) var(--tint-edge),var(--line));
+  background:var(--surface)}
+.group-head{display:flex;align-items:center;gap:9px;padding:13px 18px;
+  background:color-mix(in oklab,var(--st) var(--tint),var(--surface));
+  border-bottom:1px solid color-mix(in oklab,var(--st) var(--tint-edge),var(--line))}
+.group-head i{width:9px;height:9px;border-radius:50%;background:var(--st)}
+.group-head b{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:color-mix(in oklab,var(--st) 70%,var(--ink));font-weight:500}
+.group-head span{margin-left:auto;font-family:"DM Mono",monospace;font-size:11px;color:var(--ink-3)}
+.group-body{padding:4px 18px}
+
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:baseline;
+  padding:13px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item-rank{font-family:"DM Mono",monospace;font-size:12px;color:var(--ink-3);min-width:16px}
+.item-brand{display:block;font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.item-name{font-family:"Instrument Serif",Georgia,serif;font-size:20px;line-height:1.15}
+.item-meta{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.item-meta a{color:var(--accent);text-decoration:none}
+.item-meta a:hover{text-decoration:underline}
+.item-note{display:block;font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:15px;color:var(--ink-2);margin-top:3px}
+.item-price{font-family:"DM Mono",monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.winner{position:relative;overflow:hidden;border-radius:var(--r-l);background:var(--surface);
+  border:1px solid color-mix(in oklab,var(--fam) 40%,var(--line));box-shadow:var(--shadow-l)}
+.winner-wash{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(130% 110% at 50% -10%,color-mix(in oklab,var(--fam) 32%,transparent) 0%,transparent 70%)}
+.winner-body{position:relative;padding:32px 24px 26px;display:flex;flex-direction:column;gap:13px}
+.winner-crown{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--fam)}
+.winner-name{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(36px,9vw,54px);line-height:.99}
+
+.fambars{display:flex;flex-direction:column;gap:9px}
+.fambar{display:grid;grid-template-columns:120px 1fr 28px;align-items:center;gap:11px}
+.fambar span{font-family:"DM Mono",monospace;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.fambar-track{height:9px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.fambar-fill{height:100%;border-radius:999px;background:var(--fam)}
+.fambar b{font-family:"DM Mono",monospace;font-size:12px;color:var(--ink-3);font-weight:400;text-align:right}
+
+.banner{background:color-mix(in oklab,var(--st-neutral) 12%,var(--surface));
+  border:1px solid color-mix(in oklab,var(--st-neutral) 34%,transparent);
+  color:var(--ink-2);border-radius:var(--r-m);padding:12px 15px;font-size:14px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);
+  background:var(--ink);color:var(--ground);padding:11px 18px;border-radius:999px;
+  font-size:14px;font-weight:500;opacity:0;pointer-events:none;z-index:60;
+  transition:opacity .25s ease, transform .25s ease;box-shadow:var(--shadow-l);max-width:90vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+.foot{margin-top:30px;text-align:center;color:var(--ink-3);font-size:13px;
+  display:flex;flex-direction:column;gap:10px;align-items:center}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+
+<div class="shell">
+  <header class="topbar" id="topbar">
+    <div class="topbar-row">
+      <div class="eyebrow" id="progressLabel">0 of 30 reviewed</div>
+      <div class="saved eyebrow" id="savedTag" style="opacity:0"><i class="saved-dot"></i> Saved</div>
+    </div>
+    <div class="rail" id="rail" aria-hidden="true"></div>
+  </header>
+  <main id="main"></main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==============================================================
+   DATA
+   Prices and links checked against ulta.com, November 2026.
+   small = smallest bottle Ulta lists; full = a standard full size.
+   ============================================================== */
+const FAMILIES = {
+  gourmand:{label:"Gourmand"}, fruity:{label:"Fruity"}, floral:{label:"Floral"},
+  amber:{label:"Amber & Musk"}, fresh:{label:"Fresh"}, woody:{label:"Woody"}
+};
+
+const STATUS = {
+  yes:    {label:"Yes",     cls:"st-yes"},
+  neutral:{label:"Neutral", cls:"st-neutral"},
+  no:     {label:"No",      cls:"st-no"}
+};
+
+const SCENTS = [
+ {id:"cloud",brand:"Ariana Grande",name:"Cloud",fam:"gourmand",sweet:85,weight:60,
+  notes:["lavender","pear","coconut","whipped praline","musk"],
+  vibe:"Marshmallow fog. Sweet, fluffy, and famous for a reason.",
+  small:30,smallSize:"0.3 oz",full:62,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/cloud-eau-de-parfum-pimprod2000100"},
+
+ {id:"destin",brand:"Balmain",name:"Destin de Balmain",fam:"fruity",sweet:65,weight:60,
+  notes:["strawberry","peony","creamy sandalwood"],
+  vibe:"Strawberries on a cashmere sweater.",
+  small:33,smallSize:"0.34 oz",full:130,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/destin-de-balmain-eau-de-parfum-pimprod2057562"},
+
+ {id:"labomba",brand:"Carolina Herrera",name:"La Bomba",fam:"fruity",sweet:70,weight:75,
+  notes:["bright fruit","jasmine","warm tonka"],
+  vibe:"Loud and red-lipstick fruity. Walks into the room first.",
+  small:36,smallSize:"0.34 oz",full:138,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/la-bomba-eau-de-parfum-pimprod2057642"},
+
+ {id:"coachcherry",brand:"Coach",name:"Cherry Parfum",fam:"fruity",sweet:75,weight:65,
+  notes:["black cherry","jasmine sambac","warm amber woods"],
+  vibe:"Cherry cola and a leather jacket.",
+  small:37,smallSize:"0.33 oz",full:85,fullSize:"1 oz",
+  url:"https://www.ulta.com/p/cherry-parfum-pimprod2058612"},
+
+ {id:"devotion",brand:"Dolce & Gabbana",name:"Devotion Intense",fam:"gourmand",sweet:90,weight:80,
+  notes:["hazelnut","orange blossom","vanilla","candied citron"],
+  vibe:"Hazelnut gelato with orange zest. Very dessert.",
+  small:40,smallSize:"0.33 oz",full:157,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/devotion-eau-de-parfum-intense-pimprod2047099"},
+
+ {id:"powerofyou",brand:"Emporio Armani",name:"Power of You",fam:"fruity",sweet:70,weight:60,
+  notes:["passion fruit","frangipani","vanilla absolute"],
+  vibe:"Tropical fruit up top, creamy vanilla underneath.",
+  small:32,smallSize:"0.33 oz",full:105,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/emporio-armani-power-of-you-eau-de-parfum-pimprod2057652"},
+
+ {id:"almostalways",brand:"Khloé Kardashian",name:"Almost Always",fam:"floral",sweet:45,weight:40,
+  notes:["soft florals","warm musk","clean skin"],
+  vibe:"Clean-sheets pretty. Quiet, easy, nothing to prove.",
+  small:32,smallSize:"0.33 oz",full:80,fullSize:"3.4 oz",
+  url:"https://www.ulta.com/p/almost-always-eau-de-parfum-pimprod2055748"},
+
+ {id:"cashmeremuse",brand:"Kylie Jenner",name:"Cashmere Muse",fam:"amber",sweet:35,weight:45,
+  notes:["salty sea air","soft woods","cashmere musk"],
+  vibe:"A sweater by the ocean on a grey morning.",
+  small:29,smallSize:"0.33 oz",full:68,fullSize:"1.6 oz",
+  url:"https://www.ulta.com/p/mood-stones-kylie-jenner-collection-cashmere-muse-eau-de-parfum-pimprod2060528"},
+
+ {id:"alien",brand:"Mugler",name:"Alien",fam:"amber",sweet:55,weight:95,
+  notes:["jasmine sambac","cashmeran wood","white amber"],
+  vibe:"Enormous, purple, unmistakable. Strangers will ask.",
+  small:37,smallSize:"0.3 oz",full:150,fullSize:"2 oz",
+  url:"https://www.ulta.com/p/alien-eau-de-parfum-xlsImpprod3920113"},
+
+ {id:"onlyhuman",brand:"Noyz",name:"Only Human",fam:"gourmand",sweet:60,weight:55,
+  notes:["vanilla bean","ambroxan","Moroccan cedarwood"],
+  vibe:"Skin, but better. Wears like a hug.",
+  small:38,smallSize:"0.5 oz",full:85,fullSize:"1.69 oz",
+  url:"https://www.ulta.com/p/only-human-eau-de-parfum-pimprod2054674"},
+
+ {id:"infusioniris",brand:"Prada",name:"Infusion d'Iris",fam:"woody",sweet:20,weight:45,
+  notes:["iris","neroli","benzoin","cedar"],
+  vibe:"Powdery and composed — fresh laundry with good makeup.",
+  small:37,smallSize:"0.33 oz",full:190,fullSize:"3.3 oz",
+  url:"https://www.ulta.com/p/infusion-diris-eau-de-parfum-pimprod2055496"},
+
+ {id:"pinkpossibilities",brand:"Squishmallows",name:"Pink Possibilities",fam:"fruity",sweet:95,weight:45,
+  notes:["strawberry","kiwi","crystallized pink sugar"],
+  vibe:"Candy shop. Completely unserious, on purpose.",
+  small:25,smallSize:"0.33 oz",full:38,fullSize:"1 oz",
+  url:"https://www.ulta.com/p/pink-possibilities-eau-de-parfum-pimprod2055182"},
+
+ {id:"borninroma",brand:"Valentino",name:"Donna Born in Roma",fam:"floral",sweet:60,weight:75,
+  notes:["jasmine","vanilla bourbon","woody cashmeran"],
+  vibe:"Night-out jasmine with a vanilla glow.",
+  small:37,smallSize:"0.3 oz",full:145,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/donna-born-in-roma-eau-de-parfum-pimprod2016295"},
+
+ {id:"flowerbomb",brand:"Viktor & Rolf",name:"Flowerbomb",fam:"floral",sweet:80,weight:90,
+  notes:["peony","centifolia rose","orchid","freesia","patchouli","vanilla"],
+  vibe:"A bouquet detonating. Sweet, huge, impossible to miss.",
+  small:35,smallSize:"0.34 oz",full:145,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/flowerbomb-eau-de-parfum-xlsImpprod18531267"},
+
+ {id:"libreeaunue",brand:"Yves Saint Laurent",name:"Libre L'Eau Nue",fam:"fresh",sweet:25,weight:25,
+  notes:["citrus","lavender","orange blossom","alcohol-free"],
+  vibe:"Barely-there citrus lavender. Gentle, sits right on skin.",
+  small:36,smallSize:"0.33 oz",full:155,fullSize:"3 oz",
+  url:"https://www.ulta.com/p/libre-leau-nue-parfum-pimprod2050865"},
+
+ {id:"eilish",brand:"Billie Eilish",name:"Eilish",fam:"gourmand",sweet:80,weight:60,
+  notes:["sugared petals","creamy vanilla","warm musks"],
+  vibe:"Cozy vanilla. The kind you want on a hoodie.",
+  small:62,smallSize:"1 oz",full:82,fullSize:"3.4 oz",
+  url:"https://www.ulta.com/p/eilish-eau-de-parfum-pimprod2030620"},
+
+ {id:"yourturn2",brand:"Billie Eilish",name:"Your Turn II",fam:"amber",sweet:50,weight:75,
+  notes:["pimento berry","cassis","fig nectar","black tea","vetiver"],
+  vibe:"Dark and a little strange. Fig, tea, smoke.",
+  small:30,smallSize:"0.33 oz",full:80,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/your-turn-ii-eau-de-parfum-pimprod2057678"},
+
+ {id:"goodgirljasmine",brand:"Carolina Herrera",name:"Good Girl Jasmine Absolute",fam:"floral",sweet:70,weight:90,
+  notes:["jasmine","tuberose","cocoa","tonka"],
+  vibe:"Good Girl turned all the way up. Jasmine with a dark sweet heart.",
+  small:39,smallSize:"0.34 oz",full:153,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/good-girl-jasmine-absolute-eau-de-parfum-pimprod2057637"},
+
+ {id:"chloeleparfum",brand:"Chloé",name:"Chloé Le Parfum",fam:"floral",sweet:55,weight:70,
+  notes:["orange blossom","fresh rose","tonka bean","vanilla"],
+  vibe:"Classic rose, warmed up until it's addictive.",
+  small:118,smallSize:"1 oz",full:192,fullSize:"3.3 oz",
+  url:"https://www.ulta.com/p/le-parfum-pimprod2054070"},
+
+ {id:"theone",brand:"Dolce & Gabbana",name:"The One",fam:"floral",sweet:55,weight:70,
+  notes:["mandarin","rose","vanilla","amber"],
+  vibe:"Elegant and timeless. The one your mom compliments.",
+  small:150,smallSize:"1.7 oz",full:165,fullSize:"2.5 oz",
+  url:"https://www.ulta.com/p/one-eau-de-parfum-prod481734"},
+
+ {id:"glimmer",brand:"Estée Lauder",name:"Glimmer",fam:"gourmand",sweet:65,weight:60,
+  notes:["amber","soft florals","sugar finish"],
+  vibe:"Floral with a sugar shimmer. Soft, polished.",
+  small:28,smallSize:"0.34 oz",full:130,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/glimmer-eau-de-parfum-spray-pimprod2060081"},
+
+ {id:"irresistible",brand:"Givenchy",name:"Irresistible",fam:"floral",sweet:50,weight:60,
+  notes:["pear","ambrette","rose","cedarwood","musk"],
+  vibe:"Rose and pear with a woody spine. Very put-together.",
+  small:55,smallSize:"0.67 oz roller",full:143,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/irresistible-eau-de-parfum-pimprod2016056"},
+
+ {id:"miutine",brand:"Miu Miu",name:"Miutine",fam:"fruity",sweet:85,weight:60,
+  notes:["wild strawberry","vanilla","brown sugar"],
+  vibe:"Strawberry brown-sugar. Playful, slightly bratty.",
+  small:37,smallSize:"0.33 oz",full:138,fullSize:"1.7 oz",
+  url:"https://www.ulta.com/p/miutine-eau-de-parfum-pimprod2054202"},
+
+ {id:"alienpulp",brand:"Mugler",name:"Alien Pulp",fam:"fruity",sweet:85,weight:75,
+  notes:["pink raspberry","creamy jasmine","fluffy musk"],
+  vibe:"Raspberry jelly and jasmine. Alien's sweeter cousin.",
+  small:35,smallSize:"0.3 oz",full:132,fullSize:"2 oz",
+  url:"https://www.ulta.com/p/alien-pulp-eau-de-parfum-fruity-pimprod2056845"},
+
+ {id:"freshcream",brand:"Philosophy",name:"Fresh Cream Silk Cloud",fam:"gourmand",sweet:80,weight:40,
+  notes:["chantilly cream","jasmine","smooth vanilla"],
+  vibe:"Whipped cream in the air. Soft, comforting, close to skin.",
+  small:29,smallSize:"15 ml",full:64,fullSize:"60 ml",
+  url:"https://www.ulta.com/p/fresh-cream-silk-cloud-eau-de-parfum-pimprod2057463"},
+
+ {id:"santalchai",brand:"Prada",name:"Infusion de Santal Chai",fam:"woody",sweet:40,weight:60,
+  notes:["sandalwood","chai spices","cardamom","citrus","clean musk"],
+  vibe:"Chai latte and sandalwood. Cozy but still clean.",
+  small:35,smallSize:"0.34 oz",full:190,fullSize:"3.38 oz",
+  url:"https://www.ulta.com/p/infusion-de-santal-chai-eau-de-parfum-pimprod2056029"},
+
+ {id:"duet",brand:"Sam Edelman",name:"Duet",fam:"floral",sweet:45,weight:55,
+  notes:["mandarin","gardenia","cedarwood"],
+  vibe:"Gardenia and citrus. Bright, polished, easy to wear.",
+  small:32,smallSize:"0.34 oz",full:72,fullSize:"1 oz",
+  url:"https://www.ulta.com/p/duet-eau-de-parfum-pimprod2056480"},
+
+ {id:"whiskedaway",brand:"Squishmallows",name:"Whisked Away",fam:"gourmand",sweet:90,weight:50,
+  notes:["foamy milk","caramel drizzle","vanilla"],
+  vibe:"Essentially a caramel latte. Coffee-shop cozy.",
+  small:25,smallSize:"0.33 oz",full:38,fullSize:"1 oz",
+  url:"https://www.ulta.com/p/whisked-away-eau-de-parfum-pimprod2055181"},
+
+ {id:"soleilneige",brand:"Tom Ford",name:"Soleil Neige",fam:"fresh",sweet:30,weight:55,
+  notes:["bright citrus","white florals","rose absolute","musk"],
+  vibe:"Sunlight on snow. Crisp, white, expensive-smelling.",
+  small:55,smallSize:"0.33 oz",full:165,fullSize:"1.69 oz",
+  url:"https://www.ulta.com/p/soleil-neige-eau-de-parfum-pimprod2056504"},
+
+ {id:"prettypeony",brand:"Viktor & Rolf",name:"Flowerbomb Pretty Peony",fam:"fruity",sweet:75,weight:65,
+  notes:["strawberry","peony","soft musk"],
+  vibe:"Flowerbomb lightened up. Strawberry and peony.",
+  small:35,smallSize:"0.34 oz",full:99,fullSize:"1 oz",
+  url:"https://www.ulta.com/p/flowerbomb-pretty-peony-eau-de-parfum-pimprod2056484"},
+
+ /* --- D.S. & Durga. Niche house, sold on their own site, not Ulta. --- */
+ {id:"idontknowwhat",brand:"D.S. & Durga",name:"I Don't Know What",fam:"amber",sweet:20,weight:45,
+  notes:["bergamot","Iso E Super","vetiver","ambrox","soft musk"],
+  vibe:"Barely a smell, more a glow. People lean in and can't name it.",
+  small:80,smallSize:"10 ml",full:225,fullSize:"50 ml",shop:"D.S. & Durga",
+  url:"https://www.dsanddurga.com/products/i-dont-know-what"},
+
+ {id:"jazminyucatan",brand:"D.S. & Durga",name:"Jazmin Yucatan",fam:"floral",sweet:35,weight:70,
+  notes:["Yucatan jasmine","sambac","passion flower","clove","vetiver","copal"],
+  vibe:"Humid jasmine at dusk. Green, heady, a little smoky.",
+  small:80,smallSize:"10 ml",full:225,fullSize:"50 ml",shop:"D.S. & Durga",
+  url:"https://www.dsanddurga.com/products/jazmin-yucatan"},
+
+ {id:"roseatlantic",brand:"D.S. & Durga",name:"Rose Atlantic",fam:"floral",sweet:30,weight:50,
+  notes:["beach rose","salt water","linden","dune grass","white moss"],
+  vibe:"Beach roses and sea air. Rose without the perfume-counter heaviness.",
+  small:80,smallSize:"10 ml",full:225,fullSize:"50 ml",shop:"D.S. & Durga",
+  url:"https://www.dsanddurga.com/products/rose-atlantic"},
+
+ {id:"aintthatsweet",brand:"D.S. & Durga",name:"Ain't That Sweet",fam:"gourmand",sweet:80,weight:70,
+  notes:["date","praline","condensed milk","bourbon vanilla","cinnamon","myrrh"],
+  vibe:"A gourmand for people who don't wear gourmands. Dates, praline, warm spice.",
+  small:80,smallSize:"10 ml",full:225,fullSize:"50 ml",shop:"D.S. & Durga",
+  url:"https://www.dsanddurga.com/products/aint-that-sweet"}
+];
+
+/* Spread the families out so she never smells two of the same kind
+   back to back — seven gourmands in a row is how a nose gets tired.
+   Greedy: always take from the largest remaining family that isn't
+   the one just placed. Deterministic, so the order never shifts. */
+const ORDER = (function(){
+  const buckets = {};
+  SCENTS.forEach(s => (buckets[s.fam] = buckets[s.fam] || []).push(s.id));
+  const keys = Object.keys(FAMILIES).filter(k => buckets[k] && buckets[k].length);
+  const out = [];
+  let prev = null;
+  while(out.length < SCENTS.length){
+    const pick = keys
+      .filter(k => buckets[k].length && k !== prev)
+      .sort((x,y) => buckets[y].length - buckets[x].length || keys.indexOf(x) - keys.indexOf(y))[0]
+      // only possible if one family is more than half the list
+      || keys.find(k => buckets[k].length);
+    out.push(buckets[pick].shift());
+    prev = pick;
+  }
+  return out;
+})();
+
+const BY_ID = Object.fromEntries(SCENTS.map(s => [s.id, s]));
+const TOTAL = ORDER.length;
+
+/* ==============================================================
+   STORAGE
+   ============================================================== */
+const KEY = "kenzie-scent-finder-v2";
+let storageOK = true;
+try{ localStorage.setItem(KEY+"-probe","1"); localStorage.removeItem(KEY+"-probe"); }
+catch(e){ storageOK = false; }
+
+function blankState(){
+  return { screen:"grid", current:null, verdicts:{}, jots:{},
+           finals:null, ranking:null };
+}
+let S = blankState();
+try{
+  const raw = storageOK ? localStorage.getItem(KEY) : null;
+  if(raw){ const l = JSON.parse(raw); if(l && typeof l === "object") S = Object.assign(blankState(), l); }
+}catch(e){ /* corrupt save -> start clean rather than break */ }
+
+let saveTimer = null;
+function save(){
+  if(!storageOK) return;
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ storageOK = false; return; }
+  const tag = document.getElementById("savedTag");
+  tag.style.opacity = "1";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{ tag.style.opacity = "0"; }, 1400);
+}
+
+/* ==============================================================
+   HELPERS
+   ============================================================== */
+const main = document.getElementById("main");
+const topbar = document.getElementById("topbar");
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("on"), 3200);
+}
+function idsWith(v){ return ORDER.filter(id => S.verdicts[id] === v); }
+function ratedCount(){ return ORDER.filter(id => S.verdicts[id]).length; }
+function stCls(id){ return S.verdicts[id] ? STATUS[S.verdicts[id]].cls : "st-new"; }
+function money(n){ return "$" + n; }
+function shopOf(s){ return s.shop || "Ulta"; }
+
+/* yes list, ranked if she ran the head-to-head */
+function yesOrdered(){
+  const yes = idsWith("yes");
+  if(!S.ranking) return yes;
+  const ranked = S.ranking.filter(id => S.verdicts[id] === "yes");
+  return ranked.concat(yes.filter(id => !ranked.includes(id)));
+}
+
+/* ==============================================================
+   HEADER
+   ============================================================== */
+function renderTop(){
+  const on = ["scent","report","finals"].includes(S.screen);
+  topbar.dataset.on = on ? "1" : "0";
+  if(!on) return;
+  document.getElementById("rail").innerHTML = ORDER.map(id => {
+    const v = S.verdicts[id];
+    return '<i class="' + stCls(id) + (v ? "" : " pending") + '"></i>';
+  }).join("");
+  document.getElementById("progressLabel").textContent =
+    ratedCount() + " of " + TOTAL + " reviewed";
+}
+
+/* ==============================================================
+   GRID
+   ============================================================== */
+function viewGrid(){
+  const left = TOTAL - ratedCount();
+  const c = { yes:idsWith("yes").length, neutral:idsWith("neutral").length, no:idsWith("no").length };
+  const started = ratedCount() > 0;
+
+  main.innerHTML = `
+    <section class="screen">
+      <div class="hero">
+        <h1>Kenzie, let's find your scent.</h1>
+        <p class="lede">${TOTAL} samples to try. Smell one, say what you think of it, and work
+        through them whenever you feel like it. At the end you'll get a list of your
+        favourites — with prices — to send to yourself.</p>
+      </div>
+
+      <div class="gridhead">
+        <h2>${left === 0 ? "All " + TOTAL + " done." : started ? "Pick your next one." : "Pick one to start."}</h2>
+        <span class="eyebrow num">${left === 0 ? "Complete" : left + " left"}</span>
+      </div>
+
+      <div class="counts">
+        <span class="count st-yes"><i></i>Yes <b class="num">${c.yes}</b></span>
+        <span class="count st-neutral"><i></i>Neutral <b class="num">${c.neutral}</b></span>
+        <span class="count st-no"><i></i>No <b class="num">${c.no}</b></span>
+        <span class="count st-new"><i></i>Not yet <b class="num">${left}</b></span>
+      </div>
+
+      <div class="grid" style="margin-top:16px">
+        ${ORDER.map(id=>{
+          const sc = BY_ID[id]; const v = S.verdicts[id];
+          return `<button class="tile ${stCls(id)}" data-id="${id}">
+            <span class="tile-brand">${esc(sc.brand)}</span>
+            <span class="tile-name">${esc(sc.name)}</span>
+            <span class="tile-foot">
+              <i class="tile-dot"></i>
+              <span class="tile-status">${v ? esc(STATUS[v].label) : "Not yet"}</span>
+            </span>
+          </button>`;
+        }).join("")}
+      </div>
+
+      <div class="legend">
+        <span class="legend-item st-new"><i class="legend-sw"></i>Not reviewed</span>
+        <span class="legend-item st-yes"><i class="legend-sw"></i>Yes</span>
+        <span class="legend-item st-neutral"><i class="legend-sw"></i>Neutral</span>
+        <span class="legend-item st-no"><i class="legend-sw"></i>No</span>
+      </div>
+
+      <div class="gridfoot">
+        <button class="btn ${left === 0 ? "btn-primary" : ""} btn-block" id="toReport">Save my report</button>
+      </div>
+
+      <div class="panel" style="margin-top:28px">
+        <h3>A few things that make this easier</h3>
+        <div class="tips">
+          <div class="tip"><i class="tip-n"></i><p><b>Spray the paper strip, not your wrist.</b> They won't all fit on two arms. Save your wrists for your favourites at the very end.</p></div>
+          <div class="tip"><i class="tip-n"></i><p><b>Wait about ten seconds before you smell it.</b> The first second is mostly alcohol.</p></div>
+          <div class="tip"><i class="tip-n"></i><p><b>Take a break every six or so.</b> Your nose gets tired and everything starts smelling the same. Sniffing your own sleeve resets it.</p></div>
+          <div class="tip"><i class="tip-n"></i><p><b>Go in any order you like.</b> Skip around, stop whenever, change your mind later. It saves as you go.</p></div>
+        </div>
+      </div>
+
+      ${storageOK ? "" : '<div class="banner" style="margin-top:14px">Heads up: this browser isn\'t letting the page save your progress, so try to finish in one sitting.</div>'}
+
+      ${started ? `<div class="foot"><button class="btn btn-ghost" id="restart">Start over from scratch</button></div>` : ""}
+    </section>`;
+
+  main.querySelectorAll(".tile").forEach(t=>{
+    t.addEventListener("click", ()=>{ S.current = t.dataset.id; S.screen = "scent"; save(); render(); });
+  });
+  document.getElementById("toReport").addEventListener("click", ()=>{
+    S.screen = "report"; save(); render();
+  });
+  const rs = document.getElementById("restart");
+  if(rs) rs.addEventListener("click", ()=>{
+    S = blankState(); save(); render();
+  });
+}
+
+/* ==============================================================
+   SCENT DETAIL
+   ============================================================== */
+const MARKS = {
+  yes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>',
+  neutral:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  no:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'
+};
+const VERDICT_COPY = {
+  yes:["Yes — I'd wear this","Goes on the shortlist"],
+  neutral:["It's nice","I like it, just not obsessed"],
+  no:["No — not for me","Hard pass"]
+};
+
+function viewScent(){
+  const id = S.current || ORDER[0];
+  const s = BY_ID[id];
+  const v = S.verdicts[id];
+  const jot = S.jots[id] || "";
+
+  main.innerHTML = `
+    <section class="screen">
+      <div class="crumb">
+        <button class="btn btn-ghost" id="back">← Back</button>
+      </div>
+
+      <article class="card fam-${s.fam}">
+        <div class="card-wash"></div>
+        <div class="card-body">
+          <span class="chip"><i class="chip-dot"></i>${esc(FAMILIES[s.fam].label)}</span>
+          <div>
+            <div class="card-brand">${esc(s.brand)}</div>
+            <h2 class="card-name">${esc(s.name)}</h2>
+          </div>
+          <p class="card-vibe">${esc(s.vibe)}</p>
+          <div class="card-rule"></div>
+          <div>
+            <div class="notes-label">What's in it</div>
+            <div class="notes">${s.notes.map(n=>'<span class="note">'+esc(n)+'</span>').join("")}</div>
+          </div>
+          <div class="meters">
+            <div class="meter"><span>Fresh</span><div class="meter-track"><i class="meter-dot" style="left:${s.sweet}%"></i></div><span>Sweet</span></div>
+            <div class="meter"><span>Subtle</span><div class="meter-track"><i class="meter-dot" style="left:${s.weight}%"></i></div><span>Bold</span></div>
+          </div>
+          <div class="price">
+            <span class="price-main">From ${money(s.small)}</span>
+            <span class="price-sub">${esc(s.smallSize)} &middot; ${esc(s.fullSize)} ${money(s.full)}</span>
+            <a class="price-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(shopOf(s))} &#8599;</a>
+          </div>
+        </div>
+      </article>
+
+      <div class="verdicts">
+        ${["yes","neutral","no"].map(k=>`
+          <button class="vbtn ${STATUS[k].cls}" data-v="${k}" aria-pressed="${v === k}">
+            <i class="vbtn-mark">${MARKS[k]}</i>
+            <span class="vbtn-txt"><b>${esc(VERDICT_COPY[k][0])}</b><small>${esc(VERDICT_COPY[k][1])}</small></span>
+          </button>`).join("")}
+      </div>
+
+      <div class="jot">
+        <label for="jotInput">Anything you want to remember about it? <span>Optional</span></label>
+        <textarea id="jotInput" rows="4" placeholder="e.g. too sweet, reminds me of Grandma's, would wear to school" spellcheck="true">${esc(jot)}</textarea>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="saveScent" style="margin-top:18px">Save</button>
+    </section>`;
+
+  const jotInput = document.getElementById("jotInput");
+  jotInput.addEventListener("input", ()=>{
+    const t = jotInput.value.trim();
+    if(t) S.jots[id] = t; else delete S.jots[id];
+    save();
+  });
+
+  main.querySelectorAll(".vbtn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const k = b.dataset.v;
+      if(S.verdicts[id] === k) delete S.verdicts[id]; else S.verdicts[id] = k;
+      // A changed answer can invalidate an existing ranking.
+      if(S.ranking && S.verdicts[id] !== "yes") S.ranking = S.ranking.filter(x => x !== id);
+      save();
+      // Stay put — she may still want to write a note. Save takes her back.
+      render();
+    });
+  });
+
+  const leave = ()=>{ S.screen = "grid"; save(); render(); };
+  document.getElementById("back").addEventListener("click", leave);
+  document.getElementById("saveScent").addEventListener("click", leave);
+}
+
+/* ==============================================================
+   FINALS — binary insertion sort over the "yes" pile.
+   Plain data only, so it survives a reload mid-round.
+   ============================================================== */
+function estimateComparisons(n){
+  let t = 0; for(let i=1;i<n;i++) t += Math.ceil(Math.log2(i+1));
+  return Math.max(t,1);
+}
+function startFinals(){
+  const pool = idsWith("yes");
+  if(pool.length < 2){ S.ranking = pool.slice(); S.finals = null; S.screen = "report"; return; }
+  S.finals = { sorted:[pool[0]], queue:pool.slice(1), current:null, lo:0, hi:0,
+               done:0, estimate:estimateComparisons(pool.length) };
+  S.screen = "finals";
+  advanceFinals();
+}
+function advanceFinals(){
+  const f = S.finals;
+  if(!f) return false;
+  for(;;){
+    if(f.current === null){
+      if(f.queue.length === 0){ finishFinals(f.sorted.slice()); return false; }
+      f.current = f.queue.shift(); f.lo = 0; f.hi = f.sorted.length;
+    }
+    if(f.lo >= f.hi){ f.sorted.splice(f.lo,0,f.current); f.current = null; continue; }
+    return true;
+  }
+}
+function finishFinals(ranking){
+  S.ranking = ranking; S.finals = null; S.screen = "report";
+}
+
+function vsCard(s, side){
+  return `<button class="vs-card fam-${s.fam}" data-side="${side}">
+    <div class="card-wash"></div>
+    <div class="vs-inner">
+      <span class="chip"><i class="chip-dot"></i>${esc(FAMILIES[s.fam].label)}</span>
+      <div><div class="card-brand">${esc(s.brand)}</div><div class="vs-name">${esc(s.name)}</div></div>
+      <p class="vs-vibe">${esc(s.vibe)}</p>
+    </div></button>`;
+}
+
+function viewFinals(){
+  if(!S.finals){ S.screen = "report"; render(); return; }
+  if(!advanceFinals()){ save(); render(); return; }
+  const f = S.finals;
+  const a = BY_ID[f.current];
+  const mid = (f.lo + f.hi) >> 1;
+  const b = BY_ID[f.sorted[mid]];
+  const pct = Math.min(100, Math.round((f.done / f.estimate) * 100));
+
+  main.innerHTML = `
+    <section class="screen">
+      <div class="gridhead"><h2>Which would you wear tomorrow?</h2></div>
+      <div class="rail st-yes" style="margin-bottom:8px" aria-hidden="true">
+        <i style="flex:0 0 ${pct}%"></i><i class="pending" style="flex:1"></i>
+      </div>
+      <p class="eyebrow num" style="margin-bottom:16px">About ${Math.max(0, f.estimate - f.done)} taps to go</p>
+      <div class="versus">${vsCard(a,"a")}<div class="vs-or">or</div>${vsCard(b,"b")}</div>
+      <div class="pager">
+        <button class="btn btn-ghost" id="stop">Stop here, rank what's done</button>
+        <span class="eyebrow">Leading: ${esc(BY_ID[f.sorted[0]].name)}</span>
+      </div>
+    </section>`;
+
+  main.querySelectorAll(".vs-card").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(el.dataset.side === "a") f.hi = mid; else f.lo = mid + 1;
+      f.done++;
+      if(!advanceFinals()){ save(); render(); return; }
+      save(); render();
+    });
+  });
+  document.getElementById("stop").addEventListener("click", ()=>{
+    const rest = f.sorted.slice();
+    if(f.current !== null) rest.splice(Math.min(f.lo, rest.length), 0, f.current);
+    finishFinals(rest.concat(f.queue));
+    save(); render();
+  });
+}
+
+/* ==============================================================
+   PROFILE
+   ============================================================== */
+function profile(){
+  const base = idsWith("yes");
+  if(!base.length) return null;
+  const counts = {}; let sweet = 0, weight = 0;
+  base.forEach(id=>{ const s = BY_ID[id];
+    counts[s.fam] = (counts[s.fam]||0) + 1; sweet += s.sweet; weight += s.weight; });
+  return { counts, top:Object.entries(counts).sort((a,b)=>b[1]-a[1]), n:base.length,
+           sweet:Math.round(sweet/base.length), weight:Math.round(weight/base.length) };
+}
+function profileSentence(p){
+  if(!p) return "";
+  const fam = FAMILIES[p.top[0][0]].label;
+  const share = Math.round((p.top[0][1]/p.n)*100);
+  const sw = p.sweet >= 72 ? "firmly on the dessert end"
+           : p.sweet >= 55 ? "sweet, but not syrupy"
+           : p.sweet >= 38 ? "in the middle — soft rather than sugary"
+           : "on the clean, fresh side";
+  const wt = p.weight >= 74 ? "and you want to be noticed"
+           : p.weight >= 55 ? "with a comfortable amount of presence"
+           : "and you like it to stay close to you";
+  return share >= 45
+    ? `You're a <b>${fam}</b> person — ${share}% of your yeses landed there. Your taste sits ${sw}, ${wt}.`
+    : `Your taste is broad — no single family ran away with it, though <b>${fam}</b> edged ahead. Overall you sit ${sw}, ${wt}.`;
+}
+
+/* ==============================================================
+   REPORT
+   ============================================================== */
+function groupBlock(key, ids, ranked){
+  const st = key === "none" ? {label:"Not reviewed yet", cls:"st-new"} : STATUS[key];
+  const sub = { yes:"Worth your money", neutral:"Liked these, didn't love them",
+                no:"Don't buy these", none:"Still to smell" }[key];
+  if(!ids.length) return "";
+  return `
+    <div class="group ${st.cls}" style="margin-bottom:14px">
+      <div class="group-head"><i></i><b>${esc(st.label)} &middot; ${esc(sub)}</b><span class="num">${ids.length}</span></div>
+      <div class="group-body">
+        ${ids.map((id,i)=>{
+          const s = BY_ID[id];
+          return `<div class="item">
+            <span class="item-rank">${ranked ? (i+1) : "&middot;"}</span>
+            <span>
+              <span class="item-brand">${esc(s.brand)}</span>
+              <span class="item-name">${esc(s.name)}</span>
+              <span class="item-meta">${esc(FAMILIES[s.fam].label)} &middot; ${esc(s.notes.slice(0,3).join(", "))} &middot; <a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(shopOf(s))} &#8599;</a></span>
+              ${S.jots[id] ? `<span class="item-note">&ldquo;${esc(S.jots[id])}&rdquo;</span>` : ""}
+            </span>
+            <span class="item-price">from ${money(s.small)}</span>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+}
+
+function viewReport(){
+  const yes = yesOrdered(), neutral = idsWith("neutral"), no = idsWith("no");
+  const none = ORDER.filter(id => !S.verdicts[id]);
+  const p = profile();
+  const ranked = !!S.ranking && yes.length > 1;
+  const win = ranked ? BY_ID[yes[0]] : null;
+
+  main.innerHTML = `
+    <section class="screen">
+      <div class="crumb">
+        <button class="btn btn-ghost" id="back">← Back</button>
+        <span class="eyebrow num">${ratedCount()} / ${TOTAL}</span>
+      </div>
+
+      <div style="padding:10px 0 4px">
+        <div class="eyebrow">Kenzie's scent report</div>
+        <h1 class="serif" style="font-size:clamp(36px,9.5vw,52px);line-height:1;margin-top:6px">
+          ${win ? "Here's your winner." : yes.length ? "Here's where you landed." : "Here's what you thought."}</h1>
+      </div>
+
+      ${win ? `
+      <article class="winner fam-${win.fam}" style="margin-top:16px">
+        <div class="winner-wash"></div>
+        <div class="winner-body">
+          <div class="winner-crown">No. 1 of ${yes.length}</div>
+          <div><div class="card-brand">${esc(win.brand)}</div><h2 class="winner-name">${esc(win.name)}</h2></div>
+          <p class="card-vibe">${esc(win.vibe)}</p>
+          <div class="card-rule"></div>
+          <div class="price" style="background:transparent;border:0;padding:0">
+            <span class="price-main">From ${money(win.small)}</span>
+            <span class="price-sub">${esc(win.smallSize)} &middot; ${esc(win.fullSize)} ${money(win.full)}</span>
+            <a class="price-link" href="${esc(win.url)}" target="_blank" rel="noopener noreferrer">Buy at ${esc(shopOf(win))} &#8599;</a>
+          </div>
+        </div>
+      </article>` : ""}
+
+      ${!ranked && yes.length > 1 ? `
+      <div class="panel" style="margin-top:18px">
+        <h3>Want one clear winner?</h3>
+        <p>You said yes to <b>${yes.length}</b>. Run them head-to-head and we'll rank them properly —
+        about ${estimateComparisons(yes.length)} taps.</p>
+        <button class="btn btn-primary btn-block" id="runFinals">Run the head-to-head</button>
+      </div>` : ""}
+
+      <div class="sec"><h2>Every scent, sorted</h2><span class="eyebrow">Yes &middot; Neutral &middot; No</span></div>
+      ${groupBlock("yes", yes, ranked)}
+      ${groupBlock("neutral", neutral, false)}
+      ${groupBlock("no", no, false)}
+      ${groupBlock("none", none, false)}
+
+      ${p ? `
+      <div class="sec"><h2>What your nose likes</h2><span class="eyebrow">Your profile</span></div>
+      <div class="panel">
+        <p>${profileSentence(p)}</p>
+        <div class="fambars">
+          ${p.top.map(([k,n])=>`
+            <div class="fambar fam-${k}">
+              <span>${esc(FAMILIES[k].label)}</span>
+              <div class="fambar-track"><i class="fambar-fill" style="width:${Math.round((n/p.n)*100)}%"></i></div>
+              <b class="num">${n}</b>
+            </div>`).join("")}
+        </div>
+        <p style="font-size:13.5px;color:var(--ink-3)">Sweetness ${p.sweet}/100 &middot; Strength ${p.weight}/100.
+        Those two numbers are the shortcut when someone at the counter asks what you're after.</p>
+      </div>` : ""}
+
+      ${yes.length ? `
+      <div class="sec"><h2>Before you buy</h2><span class="eyebrow">Last step</span></div>
+      <div class="panel">
+        <p>Paper strips get you most of the way, but perfume smells different on skin.</p>
+        <div class="tips">
+          <div class="tip"><i class="tip-n"></i><p>Spray <b>${esc(BY_ID[yes[0]].name)}</b> on one wrist and <b>${yes[1] ? esc(BY_ID[yes[1]].name) : "your runner-up"}</b> on the other. Don't rub them together — it crushes the top notes.</p></div>
+          <div class="tip"><i class="tip-n"></i><p>Walk away for <b>thirty minutes</b>. The one you keep lifting your wrist to smell is the one to buy.</p></div>
+          <div class="tip"><i class="tip-n"></i><p>Start with the <b>small bottle</b> — most of these are around $30. You don't have to commit to a full size on day one.</p></div>
+        </div>
+      </div>` : ""}
+
+      <div class="sec"><h2>Save your report</h2><span class="eyebrow">You're done</span></div>
+      <div class="panel">
+        ${none.length ? `<div class="banner">You still have <b>${none.length}</b> left to smell. You can save now and save again later — it'll just be missing those.</div>` : ""}
+        <p>A proper PDF, laid out like this page, with every shop link still tappable.</p>
+        <button class="btn btn-primary btn-block" id="dl">Save my report</button>
+        <p style="font-size:13px;color:var(--ink-3)" id="dlHint">On a computer this downloads the file. On a phone it opens
+        the share sheet, so you can text it, email it or save it to Files.</p>
+      </div>
+
+      <div class="foot">
+        <p>Prices checked November 2026 — tap any link for the live price.</p>
+        <button class="btn btn-ghost" id="redo">Start over from scratch</button>
+      </div>
+    </section>`;
+
+  document.getElementById("back").addEventListener("click", ()=>{ S.screen = "grid"; save(); render(); });
+
+  const rf = document.getElementById("runFinals");
+  if(rf) rf.addEventListener("click", ()=>{ startFinals(); save(); render(); });
+
+  wireDownload();
+
+  document.getElementById("redo").addEventListener("click", ()=>{
+    S = blankState(); save(); render();
+  });
+}
+
+/* ==============================================================
+   THE PDF
+   Everything the report needs, flattened into plain data for
+   report-pdf.js. Layout and styling live over there.
+   ============================================================== */
+function reportPayload(){
+  const yes = yesOrdered(), neutral = idsWith("neutral"), no = idsWith("no");
+  const none = ORDER.filter(id => !S.verdicts[id]);
+  const ranked = !!S.ranking && yes.length > 1;
+  const p = profile();
+  const pick = id => {
+    const s = BY_ID[id];
+    return { brand:s.brand, name:s.name, fam:s.fam, famLabel:FAMILIES[s.fam].label,
+             notes:s.notes, vibe:s.vibe, small:s.small, smallSize:s.smallSize,
+             full:s.full, fullSize:s.fullSize, url:s.url, shop:shopOf(s),
+             note:S.jots[id] || "" };
+  };
+  return {
+    date: new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}),
+    total: TOTAL,
+    winner: ranked ? pick(yes[0]) : null,
+    counts: { yes:yes.length, neutral:neutral.length, no:no.length, none:none.length },
+    groups: [
+      { key:"yes",     label:"Yes",     sub:"Worth your money",              items:yes.map(pick),     ranked:ranked },
+      { key:"neutral", label:"Neutral", sub:"Liked these, didn't love them", items:neutral.map(pick), ranked:false },
+      { key:"no",      label:"No",      sub:"Don't buy these",               items:no.map(pick),      ranked:false },
+      { key:"none",    label:"Not reviewed yet", sub:"Still to smell",       items:none.map(pick),    ranked:false }
+    ],
+    profile: p ? {
+      sentence: profileSentence(p).replace(/<\/?b>/g,""),
+      n:p.n, sweet:p.sweet, weight:p.weight,
+      families: p.top.map(([k,c]) => ({ key:k, label:FAMILIES[k].label, n:c }))
+    } : null,
+    steps: yes.length ? [
+      "Spray " + BY_ID[yes[0]].name + " on one wrist and " +
+        (yes[1] ? BY_ID[yes[1]].name : "your runner-up") +
+        " on the other. Don't rub them together — it crushes the top notes.",
+      "Walk away for thirty minutes. The one you keep lifting your wrist to smell is the one to buy.",
+      "Start with the small bottle. You don't have to commit to a full size on day one."
+    ] : []
+  };
+}
+
+function wireDownload(){
+  const btn = document.getElementById("dl");
+  const hint = document.getElementById("dlHint");
+  if(!btn) return;
+
+  if(typeof window.saveReportPDF !== "function"){
+    btn.disabled = true;
+    btn.textContent = "Report unavailable";
+    if(hint) hint.textContent = "The PDF tools didn't load — refresh the page and try again.";
+    return;
+  }
+
+  btn.addEventListener("click", async ()=>{
+    const old = btn.textContent;
+    btn.disabled = true; btn.textContent = "Building your report…";
+    try{
+      const how = await window.saveReportPDF(reportPayload());
+      if(how === "shared")          toast("Sent to your share sheet.");
+      else if(how === "cancelled")  toast("No problem — nothing was saved.");
+      else                          toast("Saved to your downloads.");
+      btn.textContent = how === "downloaded" ? "Saved ✓" : old;
+    }catch(err){
+      btn.textContent = old;
+      toast("Couldn't build the PDF. Refresh and try again.");
+      console.error(err);
+    }finally{
+      btn.disabled = false;
+    }
+  });
+}
+
+/* ==============================================================
+   ROUTER
+   ============================================================== */
+function render(){
+  renderTop();
+  switch(S.screen){
+    case "grid":   viewGrid(); break;
+    case "scent":  viewScent(); break;
+    case "finals": viewFinals(); break;
+    case "report": viewReport(); break;
+    default:       viewGrid();
+  }
+  if(S.screen !== "finals") window.scrollTo({top:0,behavior:"instant"});
+}
+
+/* Repair a stale save that points at a screen whose data is gone. */
+if(S.screen === "scent" && !BY_ID[S.current]) S.screen = "grid";
+if(S.screen === "finals" && !S.finals) S.screen = S.ranking ? "report" : "grid";
+if(!["grid","scent","finals","report"].includes(S.screen)) S.screen = "grid";
+
+render();
+</script>
