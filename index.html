@@ -687,6 +687,19 @@ try{
   if(raw){ const l = JSON.parse(raw); if(l && typeof l === "object") S = Object.assign(blankState(), l); }
 }catch(e){ /* corrupt save -> start clean rather than break */ }
 
+/* Safari evicts ordinary site storage after about a week of not visiting.
+   Asking for persistent storage exempts this origin from that sweep. It is
+   granted outright for home-screen installs and silently declined otherwise,
+   so there is nothing to handle on failure. */
+(function requestDurableStorage(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist) return;
+    navigator.storage.persisted().then(already => {
+      if(!already) return navigator.storage.persist();
+    }).catch(()=>{});
+  }catch(e){ /* older browsers: nothing to do */ }
+})();
+
 let saveTimer = null;
 function save(){
   if(!storageOK) return;
