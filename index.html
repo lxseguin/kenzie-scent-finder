@@ -223,6 +223,14 @@ input[aria-invalid="true"]{border-color:var(--fam-fruity)}
 .btn:active{transform:translateY(1px)}
 .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 .btn-primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+/* --accent-ink flips with the theme, so the tick stays legible on both greens */
+.btn.is-saved{background:var(--st-yes);color:var(--accent-ink);border-color:transparent}
+.btn.pulse{animation:savedPulse .36s cubic-bezier(.2,.75,.3,1)}
+@keyframes savedPulse{
+  0%{transform:scale(1)}
+  32%{transform:scale(1.035)}
+  100%{transform:scale(1)}
+}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--ink-3);font-weight:500;padding:10px 12px;font-size:14px}
 .btn-ghost:hover{color:var(--ink);background:var(--surface-2);box-shadow:none}
 .btn-block{width:100%}
@@ -778,16 +786,6 @@ function viewGrid(){
         <button class="btn ${left === 0 ? "btn-primary" : ""} btn-block" id="toReport">Save my report</button>
       </div>
 
-      <div class="panel" style="margin-top:28px">
-        <h3>A few things that make this easier</h3>
-        <div class="tips">
-          <div class="tip"><i class="tip-n"></i><p><b>Spray the paper strip, not your wrist.</b> They won't all fit on two arms. Save your wrists for your favourites at the very end.</p></div>
-          <div class="tip"><i class="tip-n"></i><p><b>Wait about ten seconds before you smell it.</b> The first second is mostly alcohol.</p></div>
-          <div class="tip"><i class="tip-n"></i><p><b>Take a break every six or so.</b> Your nose gets tired and everything starts smelling the same. Sniffing your own sleeve resets it.</p></div>
-          <div class="tip"><i class="tip-n"></i><p><b>Go in any order you like.</b> Skip around, stop whenever, change your mind later. It saves as you go.</p></div>
-        </div>
-      </div>
-
       ${storageOK ? "" : '<div class="banner" style="margin-top:14px">Heads up: this browser isn\'t letting the page save your progress, so try to finish in one sitting.</div>'}
 
       ${started ? `<div class="foot"><button class="btn btn-ghost" id="restart">Start over from scratch</button></div>` : ""}
@@ -880,19 +878,40 @@ function viewScent(){
     save();
   });
 
-  main.querySelectorAll(".vbtn").forEach(b=>{
+  const vbtns = main.querySelectorAll(".vbtn");
+  vbtns.forEach(b=>{
     b.addEventListener("click", ()=>{
       const k = b.dataset.v;
       if(S.verdicts[id] === k) delete S.verdicts[id]; else S.verdicts[id] = k;
       save();
-      // Stay put — she may still want to write a note. Save takes her back.
-      render();
+      /* Repaint just the buttons and the header. A full render would
+         scroll her back to the top of the page. */
+      vbtns.forEach(x => x.setAttribute("aria-pressed", String(S.verdicts[id] === x.dataset.v)));
+      renderTop();
     });
   });
 
-  const leave = ()=>{ S.screen = "grid"; save(); render(); };
-  document.getElementById("back").addEventListener("click", leave);
-  document.getElementById("saveScent").addEventListener("click", leave);
+  document.getElementById("back").addEventListener("click", ()=>{
+    S.screen = "grid"; save(); render();
+  });
+
+  const saveBtn = document.getElementById("saveScent");
+  saveBtn.addEventListener("click", ()=>{
+    save();
+    saveBtn.textContent = "Saved ✓";
+    /* Drop the classes and force a reflow before re-adding them, so the
+       pulse replays even when the button already said "Saved ✓". */
+    saveBtn.classList.remove("is-saved","pulse");
+    void saveBtn.offsetWidth;
+    saveBtn.classList.add("is-saved","pulse");
+    /* The toast lands on every press, animation or not. */
+    toast("Saved");
+    clearTimeout(saveBtn._t);
+    saveBtn._t = setTimeout(()=>{
+      saveBtn.textContent = "Save";
+      saveBtn.classList.remove("is-saved","pulse");
+    }, 1900);
+  });
 }
 
 /* ==============================================================
@@ -1006,10 +1025,8 @@ function viewReport(){
       <div class="sec"><h2>Save your report</h2><span class="eyebrow">You're done</span></div>
       <div class="panel">
         ${none.length ? `<div class="banner">You still have <b>${none.length}</b> left to smell. You can save now and save again later — it'll just be missing those.</div>` : ""}
-        <p>A proper PDF, laid out like this page, with every shop link still tappable.</p>
         <button class="btn btn-primary btn-block" id="dl">Save my report</button>
-        <p style="font-size:13px;color:var(--ink-3)" id="dlHint">On a computer this downloads the file. On a phone it opens
-        the share sheet, so you can text it, email it or save it to Files.</p>
+        <p style="font-size:13px;color:var(--ink-3);display:none" id="dlHint"></p>
       </div>
 
       <div class="foot">
@@ -1074,6 +1091,9 @@ function wireDownload(){
   const hint = document.getElementById("dlHint");
   if(!btn) return;
 
+  /* The hint line is hidden until something actually goes wrong. */
+  const showHint = msg => { if(hint){ hint.textContent = msg; hint.style.display = ""; } };
+
   const onClick = async ()=>{
     const old = btn.textContent;
     btn.disabled = true; btn.textContent = "Building your report…";
@@ -1085,7 +1105,8 @@ function wireDownload(){
       btn.textContent = how === "downloaded" ? "Saved ✓" : old;
     }catch(err){
       btn.textContent = old;
-      toast("Couldn't build the PDF. Refresh and try again.");
+      showHint("Couldn't build the PDF — refresh the page and try again.");
+      toast("Couldn't build the PDF.");
       console.error(err);
     }finally{
       btn.disabled = false;
@@ -1108,7 +1129,7 @@ function wireDownload(){
     }else if(++tries > 100){
       clearInterval(poll);
       btn.textContent = "Report unavailable";
-      if(hint) hint.textContent = "The PDF tools didn't load — check your connection and refresh.";
+      showHint("The PDF tools didn't load — check your connection and refresh.");
     }
   }, 100);
 }
