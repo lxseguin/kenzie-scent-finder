@@ -3,9 +3,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
 
-<script src="vendor/jspdf.umd.min.js"></script>
-<script src="fonts/fonts.js"></script>
-<script src="report-pdf.js"></script>
+<script defer src="vendor/jspdf.umd.min.js"></script>
+<script defer src="fonts/fonts.js"></script>
+<script defer src="report-pdf.js"></script>
 
 <style>
 /* ============================================================
@@ -1192,14 +1192,7 @@ function wireDownload(){
   const hint = document.getElementById("dlHint");
   if(!btn) return;
 
-  if(typeof window.saveReportPDF !== "function"){
-    btn.disabled = true;
-    btn.textContent = "Report unavailable";
-    if(hint) hint.textContent = "The PDF tools didn't load — refresh the page and try again.";
-    return;
-  }
-
-  btn.addEventListener("click", async ()=>{
+  const onClick = async ()=>{
     const old = btn.textContent;
     btn.disabled = true; btn.textContent = "Building your report…";
     try{
@@ -1215,7 +1208,27 @@ function wireDownload(){
     }finally{
       btn.disabled = false;
     }
-  });
+  };
+
+  /* The PDF tools load deferred, so they may land after this screen draws. */
+  const ready = () => typeof window.saveReportPDF === "function";
+  if(ready()){ btn.addEventListener("click", onClick); return; }
+
+  const idle = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Getting ready…";
+  let tries = 0;
+  const poll = setInterval(()=>{
+    if(ready()){
+      clearInterval(poll);
+      btn.disabled = false; btn.textContent = idle;
+      btn.addEventListener("click", onClick);
+    }else if(++tries > 100){
+      clearInterval(poll);
+      btn.textContent = "Report unavailable";
+      if(hint) hint.textContent = "The PDF tools didn't load — check your connection and refresh.";
+    }
+  }, 100);
 }
 
 /* ==============================================================
